@@ -70,6 +70,8 @@ The Router Agent container calls tools via the **AgentCore Gateway** using MCP p
 ├── architecture/
 │   ├── llm-router-architecture.md    # Full system design
 │   ├── iso-42001-gap-analysis.md     # ISO 42001 compliance analysis
+│   ├── soc2-assessment.md            # SOC 2 Trust Services Criteria assessment
+│   ├── compliance-comparison.md      # ISO 42001 vs SOC 2 comparison
 │   ├── async-processing.md           # Async polling pattern details
 │   ├── gateway-mcp.md               # Gateway & MCP protocol explanation
 │   └── diagrams.md                   # Mermaid diagrams (render on GitHub)
@@ -456,21 +458,29 @@ openai_api_key = "sk-..."
 
 Then add external models to the tiers in `agent/app.py` and the data classification step will automatically enforce residency rules.
 
-## ISO 42001 Compliance
+## ISO 42001 & SOC 2 Compliance
 
-Built-in components addressing ISO/IEC 42001:2023 (AI Management Systems):
+Built-in components addressing both ISO/IEC 42001:2023 (AI Management Systems) and SOC 2 Trust Services Criteria:
 
-| Component | Controls | What it does |
-|-----------|----------|--------------|
-| Bedrock Guardrails | A.9.4, A.7.5 | Content filtering, PII masking, topic blocking, prompt attack detection |
-| Data Classification | A.7.5, A.7.6 | Scans for PII before external routing, enforces data residency, logs decisions |
-| Provenance Logging | A.7.6 | Full lineage record per request: who, what, why, how, where, model provenance |
-| Human Oversight | A.9.5, A.3.3 | Kill switch, model override, concern reporting with SLA tracking |
-| Transparency API | A.8.2–A.8.4 | Routing explanations, user audit log, model cards, mandatory disclosure headers |
-| Governance Docs | A.2, A.5, A.6.2.9 | AI Policy, Risk Register, Impact Assessment, Acceptable Use Policy (versioned S3) |
-| X-Ray Tracing | A.6.2.6 | Full cross-service trace correlation with sampling rules |
+| Component | ISO 42001 | SOC 2 | What it does |
+|-----------|-----------|-------|--------------|
+| Bedrock Guardrails | A.9.4 | PI1.2/PI1.3 | Content filtering, PII masking, topic blocking |
+| Data Classification | A.7.5, A.7.6 | C1.1, CC6.7 | PII detection, data residency enforcement |
+| Provenance Logging | A.7.6 | PI1.4 | Full lineage record per request |
+| Human Oversight | A.9.5, A.3.3 | CC9.1, P8.1 | Kill switch, concern reporting, overrides |
+| Transparency API | A.8.2–A.8.4 | P5.1 | Routing explanations, user audit, model cards |
+| Governance Docs | A.2, A.5 | CC1.1, CC3.1 | AI Policy, Risk Register, Impact Assessment |
+| DR Plan + Backup | — | A1.3, A1.4 | RTO/RPO targets, restore procedures |
+| Data Retention | — | C1.3 | Documented retention per data type |
+| Consent Mechanism | — | P2.1 | `X-Data-Consent` header for external routing |
+| Org Structure | — | CC1.1 | RACI matrix, role definitions |
+| X-Ray Tracing | A.6.2.6 | CC4.1 | Cross-service trace correlation |
+| Auditor Role | Clause 9 | CC4.2 | Read-only access for compliance reviews |
 
-See `architecture/iso-42001-gap-analysis.md` for the full control mapping.
+**ISO 42001**: 30/39 controls fully implemented, 8 partial, 1 gap remaining.
+**SOC 2**: All Trust Services Criteria covered (35/35).
+
+See `architecture/compliance-comparison.md` for a detailed side-by-side analysis.
 
 ## Observability
 
