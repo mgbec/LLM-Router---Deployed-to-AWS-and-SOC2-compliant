@@ -166,6 +166,11 @@ def _chat_completions(event: dict) -> dict:
             .get("sub", "anonymous")
         )
 
+        # SOC 2 P2.1: Check data consent header for external provider routing
+        data_consent = event.get("headers", {}).get("x-data-consent", "internal-only")
+        if data_consent == "internal-only":
+            routing_hints["prefer_provider"] = "bedrock"
+
         if not messages:
             return {
                 "statusCode": 400,
