@@ -75,6 +75,7 @@ The Router Agent container calls tools via the **AgentCore Gateway** using MCP p
 │   ├── compliance-comparison.md      # ISO 42001 vs SOC 2 comparison
 │   ├── async-processing.md           # Async polling pattern details
 │   ├── gateway-mcp.md               # Gateway & MCP protocol explanation
+│   ├── opa-policies.md              # OPA explanation and usage guide
 │   └── diagrams.md                   # Mermaid diagrams (render on GitHub)
 ├── terraform/
 │   ├── main.tf                       # Provider config, locals
