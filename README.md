@@ -593,6 +593,16 @@ Requires:
 - User tier access control
 - Rate limiting per policy
 
+The agent container runs OPA as a **sidecar process** (localhost:8181). The Rego policy file is the single source of truth — no logic is duplicated in Python. The agent sends routing context as input and receives allow/deny decisions over HTTP.
+
+```
+Agent Container
+├── FastAPI app (port 8080)     ← handles /invocations
+├── OPA sidecar (port 8181)    ← evaluates routing.rego
+│   └── /app/policies/          ← mounted Rego files
+└── entrypoint.sh               ← starts both processes
+```
+
 **Terraform policies** (`policies/terraform/main.rego`) validate:
 - DynamoDB tables have PITR enabled
 - Lambda functions have X-Ray tracing

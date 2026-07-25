@@ -54,8 +54,14 @@ info "Authenticating Docker to ECR..."
 aws ecr get-login-password --region "${REGION}" | docker login --username AWS --password-stdin "${ACCOUNT_ID}.dkr.ecr.${REGION}.amazonaws.com"
 
 # Step 6: Build and push the router agent image (ARM64 required by AgentCore)
+info "Copying OPA policies into agent build context..."
+cp -r "${PROJECT_ROOT}/policies/opa/" "${PROJECT_ROOT}/agent/policies/"
+
 info "Building router agent image (linux/arm64)..."
 docker build --platform linux/arm64 -t "${PROJECT_NAME}-router-agent:latest" "${PROJECT_ROOT}/agent"
+
+# Clean up copied policies
+rm -rf "${PROJECT_ROOT}/agent/policies/"
 
 info "Pushing image to ECR..."
 docker tag "${PROJECT_NAME}-router-agent:latest" "${ECR_REPO}:latest"
