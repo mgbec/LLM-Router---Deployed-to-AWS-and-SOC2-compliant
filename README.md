@@ -61,6 +61,7 @@ The Router Agent container calls tools via the **AgentCore Gateway** using MCP p
 - **Data Provenance & Lineage**: Full audit trail per request (who, what, why, how, where, model provenance)
 - **Adaptive Feedback Loop**: Model weights adjust based on observed latency, quality, and error rates via Kinesis pipeline
 - **Circuit Breaker**: Automatic failover when a model/provider degrades
+- **OPA Policy Engine**: Routing decisions enforced by testable policies (budget, access tier, rate limits, consent)
 - **OpenAI-Compatible API**: Drop-in replacement with routing metadata in responses
 - **Chat UI**: React frontend with Cognito auth, routing metadata display, policy selector, and async polling
 
@@ -126,11 +127,18 @@ The Router Agent container calls tools via the **AgentCore Gateway** using MCP p
 ├── diagrams/                          # Architecture diagram generator
 │   ├── generate.py                   # Python Diagrams script (AWS icons → PNG)
 │   └── requirements.txt              # pip install diagrams
+├── policies/                          # OPA policy definitions
+│   ├── opa/
+│   │   ├── routing.rego              # Routing decision policies (Rego)
+│   │   └── routing_test.rego         # Unit tests for routing policies
+│   └── terraform/
+│       └── main.rego                 # Terraform plan validation (Conftest)
 └── scripts/
     ├── deploy.sh                     # Full build + push + apply (two-phase)
     ├── get-token.sh                  # Get Cognito auth token + quick test
     ├── run-tests.sh                  # Comprehensive test suite (26 tests)
     ├── test-async.sh                 # Async request test (submit + poll + display)
+    ├── test-policies.sh              # OPA routing + Terraform validation tests
     └── view-audit-log.py             # View provenance records from DynamoDB
 ```
 
@@ -564,6 +572,35 @@ export LLM_ROUTER_TOKEN="<your-access-token>"
 unset LLM_ROUTER_TOKEN
 ./scripts/run-tests.sh
 ```
+
+### Policy Tests (OPA + Conftest)
+
+```bash
+# Run OPA routing policy unit tests + Terraform plan validation
+./scripts/test-policies.sh
+```
+
+Requires:
+- [OPA](https://www.openpolicyagent.org/docs/latest/#1-download-opa) — for routing policy tests
+- [Conftest](https://www.conftest.dev/install/) — for Terraform plan validation
+
+**Routing policies** (`policies/opa/routing.rego`) enforce:
+- System kill switch
+- Model enable/disable
+- External routing consent
+- Per-request budget limits
+- Human review triggers
+- User tier access control
+- Rate limiting per policy
+
+**Terraform policies** (`policies/terraform/main.rego`) validate:
+- DynamoDB tables have PITR enabled
+- Lambda functions have X-Ray tracing
+- S3 buckets block public access
+- Kinesis uses KMS encryption
+- IAM doesn't use wildcard resources unnecessarily
+- Log groups have retention set
+- Secrets have recovery windows
 
 ## Configuration
 

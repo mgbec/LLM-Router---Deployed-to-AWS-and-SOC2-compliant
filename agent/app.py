@@ -48,6 +48,8 @@ from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 
 import boto3
 
+from opa_engine import OPAPolicyEngine
+
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -68,6 +70,7 @@ GUARDRAIL_VERSION = os.environ.get("GUARDRAIL_VERSION", "DRAFT")
 AUDIT_LOG_TABLE = os.environ.get("AUDIT_LOG_TABLE", "")
 KILL_SWITCH_PROFILE = os.environ.get("KILL_SWITCH_PROFILE", "")
 GATEWAY_URL = os.environ.get("GATEWAY_URL", "")
+OPA_POLICIES_PATH = os.environ.get("OPA_POLICIES_PATH", "/app/policies")
 
 # AWS clients
 bedrock = boto3.client("bedrock-runtime", region_name=REGION)
@@ -181,6 +184,9 @@ class GatewayClient:
 
 # Initialize gateway client
 gateway = GatewayClient(GATEWAY_URL, REGION)
+
+# Initialize OPA policy engine
+policy_engine = OPAPolicyEngine()
 
 # Model cost table (per 1K input tokens)
 MODEL_COSTS = {
@@ -848,6 +854,47 @@ async def invoke(request: Request):
                     selected_model = DEFAULT_FALLBACK_MODEL
             except Exception as dc_err:
                 logger.warning(f"Data classification gateway call failed: {dc_err}")
+
+        # Step 4b: OPA Policy Check
+        opa_input = {
+            "system_active": config_manager.is_system_active(),
+            "selected_model": selected_model,
+            "models_enabled": {m: config_manager.is_model_enabled(m) for m in affordable},
+            "policy_id": policy_id,
+            "complexity": complexity,
+            "provider": "external" if "external" in selected_model else "bedrock",
+            "estimated_cost": MODEL_COSTS.get(selected_model, 0),
+            "max_cost_per_request": max_cost,
+            "data_consent": routing_hints.get("data_consent", "internal-only"),
+            "user_id": body.get("user_id", ""),
+            "sensitive_categories": [],
+            "pii_scan_result": "clean",
+            "quality_score": 1.0,
+            "user_request_count_1h": 0,
+        }
+        opa_decision = policy_engine.evaluate(opa_input)
+
+        if opa_decision.denied:
+            return JSONResponse(content={
+                "content": f"Request denied by policy: {'; '.join(opa_decision.deny_reasons)}",
+                "model_id": None,
+                "provider": None,
+                "complexity": complexity,
+                "policy_denied": True,
+                "deny_reasons": opa_decision.deny_reasons,
+                "request_id": request_id,
+            })
+
+        if not opa_decision.model_allowed:
+            # Try next model in candidates
+            for alt in affordable[1:]:
+                alt_input = {**opa_input, "selected_model": alt}
+                alt_decision = policy_engine.evaluate(alt_input)
+                if alt_decision.model_allowed:
+                    selected_model = alt
+                    break
+            else:
+                selected_model = DEFAULT_FALLBACK_MODEL
 
         # Step 5: Invoke the selected model
         with tracer.start_as_current_span("invoke_model") as span:
