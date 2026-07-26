@@ -61,7 +61,8 @@ The Router Agent container calls tools via the **AgentCore Gateway** using MCP p
 - **Data Provenance & Lineage**: Full audit trail per request (who, what, why, how, where, model provenance)
 - **Adaptive Feedback Loop**: Model weights adjust based on observed latency, quality, and error rates via Kinesis pipeline
 - **Circuit Breaker**: Automatic failover when a model/provider degrades
-- **OPA Policy Engine**: Routing decisions enforced by testable policies (budget, access tier, rate limits, consent)
+- **OPA Policy Engine**: Routing decisions enforced by testable Rego policies (budget, access tier, rate limits, consent)
+- **Cedar Policy Engine**: AgentCore Gateway tool authorization — fine-grained access control on every tool call
 - **OpenAI-Compatible API**: Drop-in replacement with routing metadata in responses
 - **Chat UI**: React frontend with Cognito auth, routing metadata display, policy selector, and async polling
 
@@ -75,6 +76,7 @@ The Router Agent container calls tools via the **AgentCore Gateway** using MCP p
 │   ├── compliance-comparison.md      # ISO 42001 vs SOC 2 comparison
 │   ├── async-processing.md           # Async polling pattern details
 │   ├── gateway-mcp.md               # Gateway & MCP protocol explanation
+│   ├── cedar-policies.md            # AgentCore Cedar policy engine
 │   ├── opa-policies.md              # OPA explanation and usage guide
 │   └── diagrams.md                   # Mermaid diagrams (render on GitHub)
 ├── terraform/
@@ -485,6 +487,10 @@ Built-in components addressing both ISO/IEC 42001:2023 (AI Management Systems) a
 | Org Structure | — | CC1.1 | RACI matrix, role definitions |
 | X-Ray Tracing | A.6.2.6 | CC4.1 | Cross-service trace correlation |
 | Auditor Role | Clause 9 | CC4.2 | Read-only access for compliance reviews |
+| **OPA Policies** | A.9.3, A.9.4, A.9.5 | CC5.1, CC6.7, P2.1 | Testable routing rules (budget, consent, rate limits, tier access) |
+| **Cedar Policies** | A.9.5, A.6.2.8 | CC6.1, CC6.2, CC6.8, C1.5 | Deterministic tool authorization at Gateway (defense-in-depth) |
+
+**Defense-in-depth model**: OPA enforces business logic (routing decisions), Cedar enforces access control (tool authorization). Both must allow for a request to proceed. Neither can be bypassed by modifying application code alone.
 
 **ISO 42001**: 30/39 controls fully implemented, 8 partial, 1 gap remaining.
 **SOC 2**: All Trust Services Criteria covered (35/35).

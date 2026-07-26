@@ -42,6 +42,38 @@ Many components serve both frameworks simultaneously:
 | Auditor Role | Clause 9 (Performance Eval) | CC4.2 | Independent audit access |
 | DynamoDB PITR | — | A1.3, A1.4 | Backup and recovery |
 | S3 Versioning | A.6.2.9 (Documentation) | A1.4 | Document history and recovery |
+| OPA Routing Policies | A.9.3, A.9.4, A.9.5 | CC5.1, CC6.7, P2.1 | Testable business rules as code — budget, consent, rate limits |
+| Cedar Tool Policies | A.9.5, A.6.2.8 | CC6.1, CC6.2, CC6.8, C1.5 | Infrastructure-level tool authorization (cannot be bypassed in code) |
+
+---
+
+## Policy Enforcement Layers (Defense-in-Depth)
+
+Both frameworks benefit from the dual-layer policy architecture:
+
+```
+Request → OPA (Rego)     → "Should this routing decision happen?"
+              ↓ ALLOW
+         → Gateway       → Cedar  → "Is this tool call authorized?"
+              ↓ ALLOW
+         → Tool executes
+```
+
+| Property | OPA (Business Logic) | Cedar (Access Control) |
+|----------|---------------------|----------------------|
+| Language | Rego | Cedar |
+| Runs at | Inside container (sidecar) | AWS-managed (Gateway) |
+| Can be bypassed by code change? | Yes (if someone modifies agent) | No (enforced by AWS) |
+| Unit testable? | Yes (`opa test`) | Yes (Cedar validation) |
+| Audit evidence | Decision logs in container | AgentCore Observability |
+| Fail mode | Configurable (we use fail-open) | Always enforced (fail-closed in ENFORCE mode) |
+
+**For auditors**: OPA provides evidence that business rules are tested and enforceable. Cedar provides evidence that access controls are enforced at the infrastructure layer regardless of application code correctness. Together they demonstrate defense-in-depth — a core security principle for both frameworks.
+
+**Controls this strengthens**:
+- ISO A.9.5 (Human Oversight): Policies can NEVER be bypassed — even if agent code is modified
+- SOC CC5.1 (Control Activities): Policies-as-code = documented, tested, version-controlled controls
+- SOC CC6.8 (Prevent Unauthorized): Cedar prevents tool access even if IAM allows gateway access
 
 ---
 

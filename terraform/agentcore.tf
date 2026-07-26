@@ -105,6 +105,13 @@ resource "aws_bedrockagentcore_gateway" "router" {
 
   authorizer_type = "AWS_IAM"
 
+  # Cedar policy engine - evaluates every tool call
+  # Start in LOG_ONLY to validate policies before enforcing
+  policy_engine_configuration {
+    arn  = aws_bedrockagentcore_policy_engine.router.arn
+    mode = "LOG_ONLY"
+  }
+
   protocol_configuration {
     mcp {
       supported_versions = ["2025-03-26"]
