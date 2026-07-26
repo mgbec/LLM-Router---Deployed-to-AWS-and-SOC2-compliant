@@ -103,7 +103,9 @@ resource "aws_iam_role_policy" "auditor_s3" {
         ]
         Resource = [
           aws_s3_bucket.governance_docs.arn,
-          "${aws_s3_bucket.governance_docs.arn}/*"
+          "${aws_s3_bucket.governance_docs.arn}/*",
+          aws_s3_bucket.model_invocation_logs.arn,
+          "${aws_s3_bucket.model_invocation_logs.arn}/*"
         ]
       }
     ]

@@ -95,6 +95,8 @@ The Router Agent container calls tools via the **AgentCore Gateway** using MCP p
 │   ├── observability.tf              # CloudWatch dashboard & alarms
 │   ├── xray_tracing.tf              # X-Ray cross-service trace correlation
 │   ├── guardrails.tf                # Bedrock Guardrails (content + PII)
+│   ├── model_invocation_logging.tf  # Bedrock prompt/response logging to S3
+│   ├── agentcore_policy.tf          # Cedar policy engine + tool authorization
 │   ├── human_oversight.tf           # Kill switch, concern reporting, overrides
 │   ├── transparency.tf             # Routing explanations, audit log, model cards
 │   ├── data_classification.tf      # Data sensitivity scanning, residency enforcement
@@ -506,6 +508,25 @@ See `architecture/compliance-comparison.md` for a detailed side-by-side analysis
 - **Kinesis**: Real-time routing event stream feeding the adaptive weight-adjustment Lambda (both sync and async paths publish)
 - **AgentCore Native**: Built-in OpenTelemetry instrumentation (auto-enabled, no config needed)
 - **Provenance/Lineage**: Every routing decision writes a full lineage record to DynamoDB (see Data Provenance below)
+- **OPA Decision Logs**: Every policy evaluation logged to container stdout (input, decision, rules matched) → CloudWatch Logs
+- **Bedrock Model Invocation Logging**: Full prompts and responses logged to S3 + CloudWatch, including guardrail filter triggers with confidence scores (90-day retention)
+
+### Observability by Policy Layer
+
+| Layer | Where Logs Live | What's Captured |
+|-------|----------------|-----------------|
+| OPA (routing) | Container stdout → CloudWatch Logs | Every allow/deny, input context, evaluation time, rules matched |
+| Cedar (tool auth) | AgentCore Observability (Gateway traces) | Tool call allow/deny, which Cedar policy matched, principal/resource |
+| Bedrock Guardrails | S3 (`model-invocation-logs`) + CloudWatch | Filter category triggered, confidence score, action taken (BLOCK/ANONYMIZE) |
+
+### Privacy Note
+
+Model invocation logging captures raw prompts and responses. This data is:
+- Encrypted at rest (KMS)
+- Stored in a dedicated S3 bucket with public access blocked
+- Accessible only by the auditor role and account administrators
+- Retained for 90 days (30 hot, 60 Glacier), then auto-deleted
+- Documented in the data retention policy
 
 ## Data Provenance & Lineage (ISO 42001 A.7.6)
 
