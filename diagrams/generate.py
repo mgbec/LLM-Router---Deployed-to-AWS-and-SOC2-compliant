@@ -46,6 +46,7 @@ with Diagram(
             agent = ECS("Router Agent\n(ARM64 Container)")
 
         with Cluster("AgentCore Gateway (MCP)"):
+            cedar = IAM("Cedar Policy\nEngine (LOG_ONLY)")
             gw_classify = Lambda("classify_complexity")
             gw_data = Lambda("classify_data_sensitivity")
             gw_feedback = Lambda("record_feedback")
@@ -81,9 +82,10 @@ with Diagram(
 
     # Sync path
     proxy >> agent
-    agent >> gw_classify
-    agent >> gw_data
-    agent >> gw_feedback
+    agent >> cedar
+    cedar >> gw_classify
+    cedar >> gw_data
+    cedar >> gw_feedback
 
     # Model invocation
     agent >> Edge(label="simple") >> nova_lite
@@ -130,6 +132,7 @@ with Diagram(
         runtime = ECS("Router Agent")
 
     with Cluster("Gateway Tools (MCP)"):
+        cedar = IAM("Cedar Policy\nEngine")
         classify = Lambda("Classify\nComplexity")
         data_check = Lambda("Data\nClassification")
         feedback = Lambda("Record\nFeedback")
@@ -153,10 +156,10 @@ with Diagram(
 
     # Flow
     client >> apigw >> auth >> proxy >> runtime
-    runtime >> classify
-    runtime >> data_check
+    runtime >> cedar >> classify
+    runtime >> cedar >> data_check
     runtime >> bedrock
-    runtime >> feedback
+    runtime >> cedar >> feedback
     runtime >> kinesis >> adjuster >> cw
 
     # Audit writes
@@ -200,6 +203,8 @@ with Diagram(
         override = Lambda("Admin\nOverride API")
         concerns = SQS("Concerns\nQueue")
         review = Dynamodb("Review\nQueue")
+        cedar = IAM("Cedar Policy\nEngine (Tool AuthZ)")
+        opa = Lambda("OPA Policy\nEngine (Routing)")
 
     with Cluster("A.10 Third-Party"):
         model_cards = S3("Model Cards")
