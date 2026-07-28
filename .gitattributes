@@ -1,0 +1,6 @@
+# Ensure shell scripts always use LF line endings (required for Linux containers)
+*.sh text eol=lf
+agent/entrypoint.sh text eol=lf
+
+# Keep PowerShell scripts as-is (CRLF on Windows is fine)
+*.ps1 text eol=crlf
