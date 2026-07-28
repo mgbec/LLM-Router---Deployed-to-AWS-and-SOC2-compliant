@@ -108,7 +108,7 @@ resource "aws_bedrockagentcore_gateway" "router" {
   # Cedar policy engine - evaluates every tool call
   # Start in LOG_ONLY to validate policies before enforcing
   policy_engine_configuration {
-    arn  = aws_bedrockagentcore_policy_engine.router.arn
+    arn  = aws_bedrockagentcore_policy_engine.router.policy_engine_arn
     mode = "LOG_ONLY"
   }
 
@@ -118,7 +118,21 @@ resource "aws_bedrockagentcore_gateway" "router" {
     }
   }
 
+  # Ensure the gateway role has PolicyEngine permissions AND they've propagated
+  depends_on = [time_sleep.wait_for_iam_propagation]
+
   tags = local.common_tags
+}
+
+# IAM policy propagation can take 10-30 seconds
+resource "time_sleep" "wait_for_iam_propagation" {
+  depends_on      = [aws_iam_role_policy.agentcore_gateway_lambda]
+  create_duration = "30s"
+
+  triggers = {
+    # Re-trigger sleep if the policy changes
+    policy_hash = sha256(aws_iam_role_policy.agentcore_gateway_lambda.policy)
+  }
 }
 
 # -----------------------------------------------------------------------------

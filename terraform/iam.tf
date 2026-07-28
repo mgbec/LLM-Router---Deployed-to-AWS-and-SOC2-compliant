@@ -316,6 +316,19 @@ resource "aws_iam_role_policy" "agentcore_gateway_lambda" {
           aws_lambda_function.feedback_collector.arn,
           aws_lambda_function.data_classifier.arn
         ]
+      },
+      {
+        Sid    = "PolicyEngineAccess"
+        Effect = "Allow"
+        Action = [
+          "bedrock-agentcore:GetPolicyEngine",
+          "bedrock-agentcore:GetPolicy",
+          "bedrock-agentcore:ListPolicies",
+          "bedrock-agentcore:AuthorizeAction",
+          "bedrock-agentcore:PartiallyAuthorizeActions",
+          "bedrock-agentcore:EvaluatePolicy"
+        ]
+        Resource = "*"
       }
     ]
   })

@@ -15,7 +15,7 @@
 # -----------------------------------------------------------------------------
 
 resource "aws_bedrockagentcore_policy_engine" "router" {
-  name        = "${local.name_prefix}-policy-engine"
+  name        = "${replace(local.name_prefix, "-", "_")}_policy_engine"
   description = "Cedar-based authorization for LLM Router gateway tool calls"
 
   tags = merge(local.common_tags, {
@@ -30,79 +30,94 @@ resource "aws_bedrockagentcore_policy_engine" "router" {
 
 # Policy 1: Allow the router agent to call classification tools
 resource "aws_bedrockagentcore_policy" "allow_classification" {
-  name             = "allow-classification-tools"
+  name             = "allow_classification_tools"
   description      = "Permit the router agent to call complexity classification and data classification tools"
-  policy_engine_id = aws_bedrockagentcore_policy_engine.router.id
+  policy_engine_id = aws_bedrockagentcore_policy_engine.router.policy_engine_id
+  validation_mode  = "IGNORE_ALL_FINDINGS"
 
-  policy_statement = <<-CEDAR
-    permit(
-      principal,
-      action == Action::"InvokeTool",
-      resource in [
-        Tool::"complexity-classifier___classify_complexity",
-        Tool::"data-classifier___classify_data_sensitivity"
-      ]
-    );
-  CEDAR
-
-  tags = local.common_tags
+  definition {
+    cedar {
+      statement = <<-CEDAR
+        permit(
+          principal is AgentCore::IamEntity,
+          action in [
+            AgentCore::Action::"complexity-classifier___classify_complexity",
+            AgentCore::Action::"data-classifier___classify_data_sensitivity"
+          ],
+          resource == AgentCore::Gateway::"${aws_bedrockagentcore_gateway.router.gateway_arn}"
+        );
+      CEDAR
+    }
+  }
 }
 
 # Policy 2: Allow the router agent to record feedback
 resource "aws_bedrockagentcore_policy" "allow_feedback" {
-  name             = "allow-feedback-recording"
+  name             = "allow_feedback_recording"
   description      = "Permit the router agent to record quality feedback metrics"
-  policy_engine_id = aws_bedrockagentcore_policy_engine.router.id
+  policy_engine_id = aws_bedrockagentcore_policy_engine.router.policy_engine_id
+  validation_mode  = "IGNORE_ALL_FINDINGS"
 
-  policy_statement = <<-CEDAR
-    permit(
-      principal,
-      action == Action::"InvokeTool",
-      resource == Tool::"feedback-collector___record_feedback"
-    );
-  CEDAR
-
-  tags = local.common_tags
+  definition {
+    cedar {
+      statement = <<-CEDAR
+        permit(
+          principal is AgentCore::IamEntity,
+          action == AgentCore::Action::"feedback-collector___record_feedback",
+          resource == AgentCore::Gateway::"${aws_bedrockagentcore_gateway.router.gateway_arn}"
+        );
+      CEDAR
+    }
+  }
 }
 
 # Policy 3: Restrict model invocation tool to specific conditions
 resource "aws_bedrockagentcore_policy" "restrict_model_invoke" {
-  name             = "restrict-model-invocation"
+  name             = "restrict_model_invocation"
   description      = "Permit model invocation tool only when provider is bedrock"
-  policy_engine_id = aws_bedrockagentcore_policy_engine.router.id
+  policy_engine_id = aws_bedrockagentcore_policy_engine.router.policy_engine_id
+  validation_mode  = "IGNORE_ALL_FINDINGS"
 
-  policy_statement = <<-CEDAR
-    permit(
-      principal,
-      action == Action::"InvokeTool",
-      resource == Tool::"model-invoker___invoke_model"
-    ) when {
-      context.arguments.provider == "bedrock"
-    };
-  CEDAR
-
-  tags = local.common_tags
+  definition {
+    cedar {
+      statement = <<-CEDAR
+        permit(
+          principal is AgentCore::IamEntity,
+          action == AgentCore::Action::"model-invoker___invoke_model",
+          resource == AgentCore::Gateway::"${aws_bedrockagentcore_gateway.router.gateway_arn}"
+        ) when {
+          context.input has provider &&
+          context.input.provider == "bedrock"
+        };
+      CEDAR
+    }
+  }
 }
 
 # Policy 4: Forbid external model invocation without explicit flag
 resource "aws_bedrockagentcore_policy" "forbid_external_without_flag" {
-  name             = "forbid-external-without-consent"
+  name             = "forbid_external_without_consent"
   description      = "Deny model invocation to external providers unless explicitly enabled"
-  policy_engine_id = aws_bedrockagentcore_policy_engine.router.id
+  policy_engine_id = aws_bedrockagentcore_policy_engine.router.policy_engine_id
+  validation_mode  = "IGNORE_ALL_FINDINGS"
 
-  policy_statement = <<-CEDAR
-    forbid(
-      principal,
-      action == Action::"InvokeTool",
-      resource == Tool::"model-invoker___invoke_model"
-    ) when {
-      context.arguments.provider == "external"
-    } unless {
-      context.headers.x_data_consent == "all-providers"
-    };
-  CEDAR
-
-  tags = local.common_tags
+  definition {
+    cedar {
+      statement = <<-CEDAR
+        forbid(
+          principal is AgentCore::IamEntity,
+          action == AgentCore::Action::"model-invoker___invoke_model",
+          resource == AgentCore::Gateway::"${aws_bedrockagentcore_gateway.router.gateway_arn}"
+        ) when {
+          context.input has provider &&
+          context.input.provider == "external"
+        } unless {
+          context.input has x_data_consent &&
+          context.input.x_data_consent == "all-providers"
+        };
+      CEDAR
+    }
+  }
 }
 
 # Policy 5: Default deny (catch-all) - uncomment to enforce strict mode
@@ -139,5 +154,5 @@ resource "aws_bedrockagentcore_policy" "forbid_external_without_flag" {
 # For now, output the policy engine ARN for manual attachment
 output "policy_engine_arn" {
   description = "AgentCore Policy Engine ARN (attach to gateway for Cedar enforcement)"
-  value       = aws_bedrockagentcore_policy_engine.router.arn
+  value       = aws_bedrockagentcore_policy_engine.router.policy_engine_arn
 }

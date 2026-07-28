@@ -11,6 +11,10 @@ terraform {
       source  = "hashicorp/aws"
       version = "~> 6.54.0"
     }
+    time = {
+      source  = "hashicorp/time"
+      version = "~> 0.11"
+    }
   }
 
   # Uncomment and configure for remote state
