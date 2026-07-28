@@ -41,13 +41,15 @@ $PlainPassword = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto($BSTR
 Write-Host ""
 Write-Host "Authenticating..."
 
+$ErrorActionPreference = "Continue"
 $AuthResponse = aws cognito-idp initiate-auth `
     --region $Region `
     --auth-flow USER_PASSWORD_AUTH `
     --client-id $ClientId `
     --auth-parameters "USERNAME=$Username,PASSWORD=$PlainPassword" 2>&1
+$ErrorActionPreference = "Stop"
 
-$AuthJson = $AuthResponse | ConvertFrom-Json
+$AuthJson = ($AuthResponse | Where-Object { $_ -is [string] }) -join "" | ConvertFrom-Json
 
 # Check for NEW_PASSWORD_REQUIRED
 if ($AuthJson.ChallengeName -eq "NEW_PASSWORD_REQUIRED") {
@@ -58,14 +60,16 @@ if ($AuthJson.ChallengeName -eq "NEW_PASSWORD_REQUIRED") {
     $BSTR2 = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($NewPassword)
     $PlainNewPassword = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto($BSTR2)
 
+    $ErrorActionPreference = "Continue"
     $ChallengeResponse = aws cognito-idp respond-to-auth-challenge `
         --region $Region `
         --client-id $ClientId `
         --challenge-name NEW_PASSWORD_REQUIRED `
         --session $Session `
         --challenge-responses "USERNAME=$Username,NEW_PASSWORD=$PlainNewPassword" 2>&1
+    $ErrorActionPreference = "Stop"
 
-    $AuthJson = $ChallengeResponse | ConvertFrom-Json
+    $AuthJson = ($ChallengeResponse | Where-Object { $_ -is [string] }) -join "" | ConvertFrom-Json
 }
 
 $Token = $AuthJson.AuthenticationResult.AccessToken
