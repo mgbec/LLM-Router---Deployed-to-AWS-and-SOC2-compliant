@@ -140,21 +140,29 @@ The Router Agent container calls tools via the **AgentCore Gateway** using MCP p
 │       └── main.rego                 # Terraform plan validation (Conftest)
 └── scripts/
     ├── deploy.sh                     # Full build + push + apply (two-phase)
+    ├── deploy.ps1                    # Windows PowerShell equivalent
     ├── get-token.sh                  # Get Cognito auth token + quick test
+    ├── get-token.ps1                 # Windows PowerShell equivalent
     ├── run-tests.sh                  # Comprehensive test suite (26 tests)
+    ├── run-tests.ps1                 # Windows PowerShell equivalent
     ├── test-async.sh                 # Async request test (submit + poll + display)
+    ├── test-async.ps1                # Windows PowerShell equivalent
     ├── test-policies.sh              # OPA routing + Terraform validation tests
+    ├── test-policies.ps1             # Windows PowerShell equivalent
+    ├── test-cedar-policies.sh        # AgentCore Cedar policy engine tests
+    ├── test-cedar-policies.ps1       # Windows PowerShell equivalent
     └── view-audit-log.py             # View provenance records from DynamoDB
 ```
 
 ## Prerequisites
 
-- AWS CLI configured with appropriate credentials
+- AWS CLI v2 configured with appropriate credentials
 - Terraform >= 1.5.0 (tested with 1.13.1)
 - AWS Provider 6.54.0+
+- HashiCorp Time Provider (auto-installed by `terraform init`)
 - Docker with buildx and QEMU support (for ARM64 cross-compilation)
 - Bedrock model access enabled (Nova Lite, Nova Pro, Claude Sonnet 4.6)
-- jq (for test scripts)
+- jq (for test scripts on Linux/macOS)
 
 ### One-Time Setup
 
@@ -186,8 +194,11 @@ cp terraform.tfvars.example terraform.tfvars
 ### 2. Deploy
 
 ```bash
-# Full deployment (creates ECR, builds ARM64 image, pushes, deploys infra)
+# Linux/macOS
 ./scripts/deploy.sh
+
+# Windows PowerShell
+.\scripts\deploy.ps1
 ```
 
 The deploy script runs in two phases:
@@ -631,6 +642,28 @@ Agent Container
 └── entrypoint.sh               ← starts both processes
 ```
 
+### Cedar Policy Tests (AgentCore)
+
+```bash
+# Linux/macOS
+./scripts/test-cedar-policies.sh
+
+# Windows PowerShell
+.\scripts\test-cedar-policies.ps1
+```
+
+Validates the AgentCore Cedar policy engine deployment:
+
+| # | Category | What it validates |
+|---|----------|-------------------|
+| 1 | Engine Status | Policy engine exists and is ACTIVE |
+| 2 | Policies Deployed | All 4 Cedar policies exist and are ACTIVE |
+| 3 | Statement Validation | Cedar statements reference correct tools and conditions |
+| 4 | Gateway Attachment | Gateway has policy engine attached in correct mode |
+| 5 | End-to-End | Tool calls through the router trigger policy evaluation |
+
+Requires `$LLM_ROUTER_TOKEN` for end-to-end tests (sections 1-4 work without it).
+
 **Terraform policies** (`policies/terraform/main.rego`) validate:
 - DynamoDB tables have PITR enabled
 - Lambda functions have X-Ray tracing
@@ -987,6 +1020,7 @@ All scripts have PowerShell equivalents for Windows:
 | `scripts/run-tests.sh` | `scripts/run-tests.ps1` | Comprehensive test suite (20 tests) |
 | `scripts/test-async.sh` | `scripts/test-async.ps1` | Submit async request and poll |
 | `scripts/test-policies.sh` | `scripts/test-policies.ps1` | OPA + Conftest validation |
+| `scripts/test-cedar-policies.sh` | `scripts/test-cedar-policies.ps1` | AgentCore Cedar policy engine tests |
 
 ### Windows Quick Start
 
@@ -1014,6 +1048,9 @@ aws cognito-idp admin-create-user `
 
 # 6. Test OPA policies locally
 .\scripts\test-policies.ps1
+
+# 7. Test Cedar policies (AgentCore)
+.\scripts\test-cedar-policies.ps1
 ```
 
 ### Test Categories (run-tests.ps1)
