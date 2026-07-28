@@ -151,6 +151,7 @@ The Router Agent container calls tools via the **AgentCore Gateway** using MCP p
     ├── test-policies.ps1             # Windows PowerShell equivalent
     ├── test-cedar-policies.sh        # AgentCore Cedar policy engine tests
     ├── test-cedar-policies.ps1       # Windows PowerShell equivalent
+    ├── create-user.ps1               # Create a Cognito test user (Windows)
     └── view-audit-log.py             # View provenance records from DynamoDB
 ```
 
@@ -225,8 +226,21 @@ terraform apply  # Phase 2: Everything else
 
 ### 3. Create a Test User
 
-The Cognito pool uses email as an alias, so the username must NOT be an email address:
+The Cognito pool uses email as an alias, so the username must NOT be an email address.
 
+**Windows PowerShell:**
+```powershell
+# Interactive (prompts for username and email)
+.\scripts\create-user.ps1
+
+# Or with parameters
+.\scripts\create-user.ps1 -Username testuser -Email you@example.com
+
+# Custom temporary password
+.\scripts\create-user.ps1 -Username testuser -Email you@example.com -TempPassword "MyTemp456!"
+```
+
+**Linux/macOS:**
 ```bash
 aws cognito-idp admin-create-user \
   --region us-east-1 \
@@ -236,10 +250,16 @@ aws cognito-idp admin-create-user \
   --temporary-password 'TempPass123!'
 ```
 
+The script auto-detects the User Pool ID from Terraform outputs. On first login you'll be prompted to set a permanent password.
+
 ### 4. Get Token & Test
 
 ```bash
+# Linux/macOS
 ./scripts/get-token.sh
+
+# Windows PowerShell
+.\scripts\get-token.ps1
 ```
 
 The script will:
@@ -1021,6 +1041,7 @@ All scripts have PowerShell equivalents for Windows:
 | `scripts/test-async.sh` | `scripts/test-async.ps1` | Submit async request and poll |
 | `scripts/test-policies.sh` | `scripts/test-policies.ps1` | OPA + Conftest validation |
 | `scripts/test-cedar-policies.sh` | `scripts/test-cedar-policies.ps1` | AgentCore Cedar policy engine tests |
+| — | `scripts/create-user.ps1` | Create a Cognito test user (interactive) |
 
 ### Windows Quick Start
 
@@ -1029,12 +1050,7 @@ All scripts have PowerShell equivalents for Windows:
 .\scripts\deploy.ps1
 
 # 2. Create test user
-aws cognito-idp admin-create-user `
-    --region us-east-1 `
-    --user-pool-id (Push-Location terraform; terraform output -raw cognito_user_pool_id; Pop-Location) `
-    --username testuser `
-    --user-attributes Name=email,Value=you@example.com `
-    --temporary-password 'TempPass123!'
+.\scripts\create-user.ps1 -Username testuser -Email you@example.com
 
 # 3. Authenticate (exports $env:LLM_ROUTER_TOKEN)
 .\scripts\get-token.ps1
