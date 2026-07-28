@@ -976,6 +976,76 @@ cd terraform
 terraform destroy
 ```
 
+## Windows Scripts
+
+All scripts have PowerShell equivalents for Windows:
+
+| Bash Script | PowerShell Script | Description |
+|-------------|-------------------|-------------|
+| `scripts/deploy.sh` | `scripts/deploy.ps1` | Full deployment (ECR + image + infra) |
+| `scripts/get-token.sh` | `scripts/get-token.ps1` | Authenticate and quick-test |
+| `scripts/run-tests.sh` | `scripts/run-tests.ps1` | Comprehensive test suite (20 tests) |
+| `scripts/test-async.sh` | `scripts/test-async.ps1` | Submit async request and poll |
+| `scripts/test-policies.sh` | `scripts/test-policies.ps1` | OPA + Conftest validation |
+
+### Windows Quick Start
+
+```powershell
+# 1. Deploy
+.\scripts\deploy.ps1
+
+# 2. Create test user
+aws cognito-idp admin-create-user `
+    --region us-east-1 `
+    --user-pool-id (Push-Location terraform; terraform output -raw cognito_user_pool_id; Pop-Location) `
+    --username testuser `
+    --user-attributes Name=email,Value=you@example.com `
+    --temporary-password 'TempPass123!'
+
+# 3. Authenticate (exports $env:LLM_ROUTER_TOKEN)
+.\scripts\get-token.ps1
+
+# 4. Run full test suite
+.\scripts\run-tests.ps1
+
+# 5. Test async (optional custom prompt)
+.\scripts\test-async.ps1
+.\scripts\test-async.ps1 -Prompt "Design a REST API for a banking system."
+
+# 6. Test OPA policies locally
+.\scripts\test-policies.ps1
+```
+
+### Test Categories (run-tests.ps1)
+
+| # | Category | Tests |
+|---|----------|-------|
+| 1 | Health & Connectivity | Health endpoint, routing status, auth enforcement |
+| 2 | Basic Routing | Simple greeting, factual Q&A → cheap model |
+| 3 | Complexity Routing | Moderate → Nova Pro, explicit async → Opus |
+| 4 | Routing Policies | Budget, enterprise, per-request cost override |
+| 5 | Multi-Turn | System prompts, context retention |
+| 6 | Transparency (A.8) | Model cards, user audit log |
+| 7 | Human Oversight (A.9.5) | Concern reporting, admin overrides |
+| 8 | Error Handling | Empty messages, invalid policy, malformed JSON |
+| 9 | Guardrails | Medical advice topic blocking |
+
+### Token Management
+
+```powershell
+# Tokens expire after 1 hour. If tests fail with 401:
+Remove-Item Env:\LLM_ROUTER_TOKEN
+.\scripts\get-token.ps1
+
+# Or re-authenticate manually:
+$env:LLM_ROUTER_TOKEN = (aws cognito-idp initiate-auth `
+    --region us-east-1 `
+    --auth-flow USER_PASSWORD_AUTH `
+    --client-id YOUR_CLIENT_ID `
+    --auth-parameters "USERNAME=testuser,PASSWORD=YourPass123!" `
+    --query 'AuthenticationResult.AccessToken' --output text)
+```
+
 ## Known Limitations
 
 - **AgentCore Observability requires manual enablement**: After deploying, you must manually enable observability for the Runtime and Gateway in the AWS console. Go to Bedrock → AgentCore → Runtimes → select the runtime → enable observability. Same for Gateways. Terraform does not toggle this setting.
