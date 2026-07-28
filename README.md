@@ -1099,6 +1099,20 @@ $env:LLM_ROUTER_TOKEN = (aws cognito-idp initiate-auth `
     --query 'AuthenticationResult.AccessToken' --output text)
 ```
 
+## Cross-Platform Line Endings (.gitattributes)
+
+This project includes a `.gitattributes` file that prevents a common cross-platform issue: Windows uses `\r\n` (CRLF) line endings, but Linux containers require `\n` (LF). If a shell script gets committed with CRLF, it will crash inside Docker with cryptic errors like `/bin/sh: ^M: not found`.
+
+The `.gitattributes` file forces Git to normalize line endings automatically:
+
+| Pattern | Rule | Why |
+|---------|------|-----|
+| `*.sh` | Always LF | Shell scripts must use LF to run on Linux |
+| `agent/entrypoint.sh` | Always LF | Docker container entrypoint |
+| `*.ps1` | Always CRLF | PowerShell scripts are Windows-native |
+
+This means you can safely edit shell scripts in any Windows editor — Git will convert them to LF on commit and keep them LF on checkout. No manual conversion needed.
+
 ## Known Limitations
 
 - **AgentCore Observability requires manual enablement**: After deploying, you must manually enable observability for the Runtime and Gateway in the AWS console. Go to Bedrock → AgentCore → Runtimes → select the runtime → enable observability. Same for Gateways. Terraform does not toggle this setting.
