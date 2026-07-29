@@ -64,7 +64,8 @@ if ($ConftestCmd) {
 
         # Use cmd /c as workaround for PowerShell Go binary compatibility issue
         $ConftestPath = if ($ConftestCmd -is [string]) { $ConftestCmd } else { $ConftestCmd.Source }
-        cmd /c "`"$ConftestPath`" test plan.json -p `"$ProjectRoot\policies\terraform\`" --no-color"
+        $PolicyDir = "$ProjectRoot\policies\terraform"
+        cmd /c "$ConftestPath test plan.json -p $PolicyDir --no-color"
         if ($LASTEXITCODE -eq 0) {
             Write-Host ""
             Write-Host "[PASS] Terraform plan validation passed" -ForegroundColor Green
