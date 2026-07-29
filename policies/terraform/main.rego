@@ -12,6 +12,7 @@ package terraform.validation
 
 import future.keywords.in
 import future.keywords.if
+import future.keywords.contains
 
 # Helper: get all resources of a type from planned values
 resources_by_type(type) = resources if {
@@ -25,38 +26,48 @@ resources_by_type(type) = resources if {
 # RULE: All DynamoDB tables must have Point-in-Time Recovery enabled
 # =============================================================================
 
-deny[msg] if {
+deny[msg] contains msg if {
     tables := resources_by_type("aws_dynamodb_table")
     table := tables[_]
     pitr := table.values.point_in_time_recovery
-    not pitr[_].enabled == true
+    not pitr_enabled(pitr)
     msg := sprintf("DynamoDB table '%s' must have Point-in-Time Recovery enabled", [table.values.name])
+}
+
+pitr_enabled(pitr) if {
+    some entry in pitr
+    entry.enabled == true
 }
 
 # =============================================================================
 # RULE: All Lambda functions must have X-Ray tracing enabled
 # =============================================================================
 
-deny[msg] if {
+deny[msg] contains msg if {
     lambdas := resources_by_type("aws_lambda_function")
     lambda := lambdas[_]
     tracing := lambda.values.tracing_config
-    not tracing[_].mode == "Active"
+    not tracing_active(tracing)
     msg := sprintf("Lambda '%s' must have X-Ray active tracing enabled", [lambda.values.function_name])
+}
+
+tracing_active(tracing) if {
+    some entry in tracing
+    entry.mode == "Active"
 }
 
 # =============================================================================
 # RULE: No S3 buckets with public access
 # =============================================================================
 
-deny[msg] if {
+deny[msg] contains msg if {
     blocks := resources_by_type("aws_s3_bucket_public_access_block")
     block := blocks[_]
     block.values.block_public_acls != true
     msg := "S3 bucket public access block must block public ACLs"
 }
 
-deny[msg] if {
+deny[msg] contains msg if {
     blocks := resources_by_type("aws_s3_bucket_public_access_block")
     block := blocks[_]
     block.values.block_public_policy != true
@@ -67,7 +78,7 @@ deny[msg] if {
 # RULE: KMS encryption on Kinesis streams
 # =============================================================================
 
-deny[msg] if {
+deny[msg] contains msg if {
     streams := resources_by_type("aws_kinesis_stream")
     stream := streams[_]
     stream.values.encryption_type != "KMS"
@@ -103,7 +114,7 @@ allowed_wildcard_actions := {
     "cloudwatch:DescribeAlarms",
 }
 
-warn[msg] if {
+warn[msg] contains msg if {
     policies := resources_by_type("aws_iam_role_policy")
     policy := policies[_]
     
@@ -125,18 +136,24 @@ warn[msg] if {
 # RULE: AgentCore Runtime must use ARM64 (enforced by ECR image)
 # =============================================================================
 
-warn[msg] if {
+warn[msg] contains msg if {
     runtimes := resources_by_type("aws_bedrockagentcore_agent_runtime")
     runtime := runtimes[_]
-    not contains(runtime.values.agent_runtime_artifact[_].container_configuration[_].container_uri, "arm64")
+    not runtime_uses_arm64(runtime)
     msg := "AgentCore Runtime image should be built for ARM64 architecture"
+}
+
+runtime_uses_arm64(runtime) if {
+    some artifact in runtime.values.agent_runtime_artifact
+    some config in artifact.container_configuration
+    contains(config.container_uri, "arm64")
 }
 
 # =============================================================================
 # RULE: CloudWatch log groups must have retention set
 # =============================================================================
 
-deny[msg] if {
+deny[msg] contains msg if {
     groups := resources_by_type("aws_cloudwatch_log_group")
     group := groups[_]
     group.values.retention_in_days == 0
@@ -147,7 +164,7 @@ deny[msg] if {
 # RULE: API Gateway must have CORS configured
 # =============================================================================
 
-warn[msg] if {
+warn[msg] contains msg if {
     apis := resources_by_type("aws_apigatewayv2_api")
     api := apis[_]
     not api.values.cors_configuration
@@ -158,7 +175,7 @@ warn[msg] if {
 # RULE: Secrets Manager must have recovery window
 # =============================================================================
 
-deny[msg] if {
+deny[msg] contains msg if {
     secrets := resources_by_type("aws_secretsmanager_secret")
     secret := secrets[_]
     secret.values.recovery_window_in_days < 7
