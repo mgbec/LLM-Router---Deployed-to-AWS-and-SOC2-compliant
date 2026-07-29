@@ -640,8 +640,43 @@ unset LLM_ROUTER_TOKEN
 ```
 
 Requires:
-- [OPA](https://www.openpolicyagent.org/docs/latest/#1-download-opa) — for routing policy tests
-- [Conftest](https://www.conftest.dev/install/) — for Terraform plan validation
+- [OPA](https://www.openpolicyagent.org/docs/latest/#1-download-opa) >= 1.0 (v1 Rego syntax) — for routing policy tests
+- [Conftest](https://www.conftest.dev/install/) >= 0.56 — for Terraform plan validation
+
+### Installing OPA & Conftest
+
+**Linux/macOS:**
+```bash
+# OPA
+curl -L -o /usr/local/bin/opa https://openpolicyagent.org/downloads/latest/opa_linux_amd64_static
+chmod +x /usr/local/bin/opa
+
+# Conftest
+brew install conftest   # macOS
+# or download from https://github.com/open-policy-agent/conftest/releases
+```
+
+**Windows:**
+```powershell
+# OPA — download from https://github.com/open-policy-agent/opa/releases/latest
+# Get opa_windows_amd64.exe, rename to opa.exe, place on PATH
+
+# Conftest — download from https://github.com/open-policy-agent/conftest/releases/latest
+# Get conftest_X.XX.X_Windows_x86_64.zip, extract conftest.exe, place on PATH
+
+# Example: create a tools directory
+mkdir C:\tools -ErrorAction SilentlyContinue
+# Copy opa.exe and conftest.exe to C:\tools
+# Add to PATH: $env:Path += ";C:\tools"
+```
+
+**Verify installation:**
+```
+opa version    # Should show Version: 1.x.x, Rego Version: v1
+conftest --version
+```
+
+> **Note:** OPA v1.x uses Rego v1 syntax which requires the `if` keyword before rule bodies. The policies in this repo use `import future.keywords.if` for compatibility with OPA >= 0.59 and v1.x.
 
 **Routing policies** (`policies/opa/routing.rego`) enforce:
 - System kill switch
