@@ -38,7 +38,16 @@ Write-Host "--- Terraform Plan Validation ---" -ForegroundColor Cyan
 Write-Host ""
 
 # Validate Terraform plan with Conftest
-if (Get-Command conftest -ErrorAction SilentlyContinue) {
+$ConftestCmd = Get-Command conftest -ErrorAction SilentlyContinue
+if (-not $ConftestCmd) {
+    # Check common install locations
+    $ConftestPaths = @("C:\tools\conftest\conftest.exe", "$env:LOCALAPPDATA\conftest\conftest.exe")
+    foreach ($p in $ConftestPaths) {
+        if (Test-Path $p) { $ConftestCmd = $p; break }
+    }
+}
+
+if ($ConftestCmd) {
     Push-Location "$ProjectRoot\terraform"
     try {
         # Generate plan JSON if not present
@@ -53,7 +62,9 @@ if (Get-Command conftest -ErrorAction SilentlyContinue) {
             Write-Host "Using existing plan.json"
         }
 
-        & conftest test plan.json -p "$ProjectRoot\policies\terraform\" --no-color
+        # Use cmd /c as workaround for PowerShell Go binary compatibility issue
+        $ConftestPath = if ($ConftestCmd -is [string]) { $ConftestCmd } else { $ConftestCmd.Source }
+        cmd /c "`"$ConftestPath`" test plan.json -p `"$ProjectRoot\policies\terraform\`" --no-color"
         if ($LASTEXITCODE -eq 0) {
             Write-Host ""
             Write-Host "[PASS] Terraform plan validation passed" -ForegroundColor Green
@@ -69,8 +80,8 @@ if (Get-Command conftest -ErrorAction SilentlyContinue) {
 }
 else {
     Write-Host "Conftest not installed." -ForegroundColor Yellow
-    Write-Host "  Download: https://www.conftest.dev/install/"
-    Write-Host "  Or: scoop install conftest"
+    Write-Host "  Download: https://github.com/open-policy-agent/conftest/releases/latest"
+    Write-Host "  Get the Windows_x86_64.zip, extract conftest.exe to C:\tools\conftest\"
     Write-Host "Skipping Terraform validation."
 }
 
