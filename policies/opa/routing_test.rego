@@ -1,6 +1,7 @@
 package llmrouter.routing
 
 import future.keywords.in
+import future.keywords.if
 
 # =============================================================================
 # Unit Tests for Routing Policies
@@ -8,17 +9,17 @@ import future.keywords.in
 # =============================================================================
 
 # Test: System active allows requests
-test_system_active_allows {
+test_system_active_allows if {
     allow_request with input as {"system_active": true}
 }
 
 # Test: System disabled blocks requests
-test_system_disabled_blocks {
+test_system_disabled_blocks if {
     not allow_request with input as {"system_active": false}
 }
 
 # Test: Enabled model is allowed
-test_enabled_model_allowed {
+test_enabled_model_allowed if {
     model_allowed with input as {
         "selected_model": "us.amazon.nova-lite-v1:0",
         "models_enabled": {"us.amazon.nova-lite-v1:0": true}
@@ -26,7 +27,7 @@ test_enabled_model_allowed {
 }
 
 # Test: Disabled model is blocked
-test_disabled_model_blocked {
+test_disabled_model_blocked if {
     not model_allowed with input as {
         "selected_model": "us.amazon.nova-pro-v1:0",
         "models_enabled": {"us.amazon.nova-pro-v1:0": false}
@@ -34,7 +35,7 @@ test_disabled_model_blocked {
 }
 
 # Test: External routing allowed with consent and no PII
-test_external_allowed_with_consent {
+test_external_allowed_with_consent if {
     allow_external_routing with input as {
         "data_consent": "all-providers",
         "pii_scan_result": "clean"
@@ -42,14 +43,14 @@ test_external_allowed_with_consent {
 }
 
 # Test: External routing blocked without consent
-test_external_blocked_no_consent {
+test_external_blocked_no_consent if {
     not allow_external_routing with input as {
         "data_consent": "internal-only"
     }
 }
 
 # Test: External routing blocked with PII
-test_external_blocked_pii {
+test_external_blocked_pii if {
     not allow_external_routing with input as {
         "data_consent": "all-providers",
         "pii_scan_result": "blocked"
@@ -57,7 +58,7 @@ test_external_blocked_pii {
 }
 
 # Test: Within budget
-test_within_budget {
+test_within_budget if {
     within_budget with input as {
         "estimated_cost": 0.003,
         "max_cost_per_request": 0.05
@@ -65,7 +66,7 @@ test_within_budget {
 }
 
 # Test: Over budget
-test_over_budget {
+test_over_budget if {
     not within_budget with input as {
         "estimated_cost": 0.10,
         "max_cost_per_request": 0.05
@@ -73,7 +74,7 @@ test_over_budget {
 }
 
 # Test: Human review for specialized medical
-test_human_review_medical {
+test_human_review_medical if {
     requires_human_review with input as {
         "complexity": "specialized",
         "sensitive_categories": ["medical"]
@@ -81,7 +82,7 @@ test_human_review_medical {
 }
 
 # Test: No human review for simple
-test_no_review_simple {
+test_no_review_simple if {
     not requires_human_review with input as {
         "complexity": "simple",
         "sensitive_categories": [],
@@ -90,7 +91,7 @@ test_no_review_simple {
 }
 
 # Test: Budget-conscious user can't access complex tier
-test_budget_user_no_complex {
+test_budget_user_no_complex if {
     count(deny_reason) > 0 with input as {
         "complexity": "complex",
         "policy_id": "budget_conscious",
@@ -101,7 +102,7 @@ test_budget_user_no_complex {
 }
 
 # Test: Rate limit for budget user
-test_rate_limit_budget {
+test_rate_limit_budget if {
     rate_limit_exceeded with input as {
         "user_request_count_1h": 150,
         "policy_id": "budget_conscious"
@@ -109,7 +110,7 @@ test_rate_limit_budget {
 }
 
 # Test: No rate limit under threshold
-test_no_rate_limit {
+test_no_rate_limit if {
     not rate_limit_exceeded with input as {
         "user_request_count_1h": 50,
         "policy_id": "budget_conscious"
