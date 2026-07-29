@@ -53,14 +53,14 @@ deny[msg] if {
     blocks := resources_by_type("aws_s3_bucket_public_access_block")
     block := blocks[_]
     block.values.block_public_acls != true
-    msg := sprintf("S3 bucket public access block must block public ACLs")
+    msg := "S3 bucket public access block must block public ACLs"
 }
 
 deny[msg] if {
     blocks := resources_by_type("aws_s3_bucket_public_access_block")
     block := blocks[_]
     block.values.block_public_policy != true
-    msg := sprintf("S3 bucket public access block must block public policies")
+    msg := "S3 bucket public access block must block public policies"
 }
 
 # =============================================================================
