@@ -29,7 +29,7 @@ $Headers = @{ Authorization = "Bearer $Token"; "Content-Type" = "application/jso
 
 Write-Host ""
 Write-Host "================================================================" -ForegroundColor Cyan
-Write-Host "  POLICY LAYERS DEMO — OPA, Cedar, and Bedrock Guardrails" -ForegroundColor Cyan
+Write-Host "  POLICY LAYERS DEMO - OPA, Cedar, and Bedrock Guardrails" -ForegroundColor Cyan
 Write-Host "================================================================" -ForegroundColor Cyan
 Write-Host ""
 
@@ -59,7 +59,7 @@ catch {
 
 Write-Host ""
 Write-Host "  WHERE TO SEE OPA DECISIONS:" -ForegroundColor Magenta
-Write-Host "  CloudWatch Logs > /llm-router/dev/agent" -ForegroundColor Gray
+Write-Host '  CloudWatch Logs -> /llm-router/dev/agent' -ForegroundColor Gray
 Write-Host "  Filter: 'OPA ALLOW' or 'OPA DENY'" -ForegroundColor Gray
 Write-Host "  Console: https://console.aws.amazon.com/cloudwatch/home?region=us-east-1#logsV2:log-groups/log-group/%2Fllm-router%2Fdev%2Fagent" -ForegroundColor DarkGray
 Write-Host ""
@@ -68,7 +68,7 @@ Write-Host ""
 Write-Host "--- 2. OPA: External Routing Consent Block ---" -ForegroundColor Yellow
 Write-Host ""
 Write-Host "  Sending a request that would route externally WITHOUT consent..."
-Write-Host "  (OPA blocks external routing unless data_consent = 'all-providers')"
+Write-Host '  OPA blocks external routing unless data_consent = all-providers'
 Write-Host ""
 # =============================================================================
 
@@ -80,10 +80,10 @@ $body = @{
 try {
     $r = Invoke-RestMethod -Uri "$ApiEndpoint/v1/chat/completions" -Method POST -Headers $Headers -Body $body
     Write-Host "  Model selected: $($r.routing.model_selected)" -ForegroundColor Green
-    Write-Host "  (Routed to internal Bedrock model — external blocked by OPA)" -ForegroundColor Green
+    Write-Host "  Routed to internal Bedrock model - external blocked by OPA" -ForegroundColor Green
 }
 catch {
-    Write-Host "  Denied by policy (expected if external routing was attempted)" -ForegroundColor Yellow
+    Write-Host "  Denied by policy - expected if external routing was attempted" -ForegroundColor Yellow
 }
 
 Write-Host ""
@@ -109,7 +109,7 @@ try {
     $r = Invoke-RestMethod -Uri "$ApiEndpoint/v1/chat/completions" -Method POST -Headers $Headers -Body $body
     Write-Host "  Model selected: $($r.routing.model_selected)" -ForegroundColor Green
     Write-Host "  Complexity:     $($r.routing.complexity)" -ForegroundColor Green
-    Write-Host "  (Cedar evaluated: allow_classification_tools, restrict_model_invocation)" -ForegroundColor Green
+    Write-Host "  Cedar evaluated: allow_classification_tools, restrict_model_invocation" -ForegroundColor Green
 }
 catch {
     Write-Host "  Request failed: $($_.Exception.Message)" -ForegroundColor Red
@@ -117,23 +117,23 @@ catch {
 
 Write-Host ""
 Write-Host "  WHERE TO SEE CEDAR DECISIONS:" -ForegroundColor Magenta
-Write-Host "  Option A — AWS CLI:" -ForegroundColor Gray
-Write-Host "    aws bedrock-agentcore-control get-policy-engine --policy-engine-id <id>" -ForegroundColor DarkGray
-Write-Host "  Option B — CloudWatch (if Gateway observability is enabled):" -ForegroundColor Gray
-Write-Host "    Log group: /aws/bedrock-agentcore/gateways/<gateway-id>" -ForegroundColor DarkGray
+Write-Host "  Option A - AWS CLI:" -ForegroundColor Gray
+Write-Host '    aws bedrock-agentcore-control get-policy-engine --policy-engine-id <YOUR_ID>' -ForegroundColor DarkGray
+Write-Host "  Option B - CloudWatch (if Gateway observability is enabled):" -ForegroundColor Gray
+Write-Host '    Log group: /aws/bedrock-agentcore/gateways/<gateway-id>' -ForegroundColor DarkGray
 Write-Host "    Filter: 'policyDecision' or 'ALLOW' or 'DENY'" -ForegroundColor DarkGray
-Write-Host "  Option C — Console:" -ForegroundColor Gray
-Write-Host "    Bedrock > AgentCore > Gateways > select gateway > Observability tab" -ForegroundColor DarkGray
+Write-Host "  Option C - Console:" -ForegroundColor Gray
+Write-Host '    Bedrock -> AgentCore -> Gateways -> select gateway -> Observability tab' -ForegroundColor DarkGray
 Write-Host ""
 Write-Host "  NOTE: You must manually enable Gateway observability in the AWS Console:" -ForegroundColor Yellow
-Write-Host "    Bedrock > AgentCore > Gateways > llm-router-opa-dev-gateway > Enable observability" -ForegroundColor Yellow
+Write-Host '    Bedrock -> AgentCore -> Gateways -> llm-router-opa-dev-gateway -> Enable observability' -ForegroundColor Yellow
 Write-Host ""
 
 # =============================================================================
 Write-Host "--- 4. BEDROCK GUARDRAILS: Content Filtering ---" -ForegroundColor Yellow
 Write-Host ""
 Write-Host "  Sending a prompt that triggers the medical advice guardrail..."
-Write-Host "  (Guardrails block specific topic categories before the model responds)"
+Write-Host "  Guardrails block specific topic categories before the model responds"
 Write-Host ""
 # =============================================================================
 
@@ -146,12 +146,12 @@ try {
     $r = Invoke-RestMethod -Uri "$ApiEndpoint/v1/chat/completions" -Method POST -Headers $Headers -Body $body
     $content = $r.choices[0].message.content
     if ($content -match "(?i)(cannot|can't|not able|professional|doctor|seek medical|not qualified)") {
-        Write-Host "  GUARDRAIL TRIGGERED — Model declined medical advice:" -ForegroundColor Green
+        Write-Host "  GUARDRAIL TRIGGERED - Model declined medical advice:" -ForegroundColor Green
         Write-Host "  '$($content.Substring(0, [Math]::Min(150, $content.Length)))...'" -ForegroundColor Gray
     }
     else {
         Write-Host "  Response: $($content.Substring(0, [Math]::Min(150, $content.Length)))..." -ForegroundColor Gray
-        Write-Host "  (Guardrail may have allowed general health info)" -ForegroundColor Yellow
+        Write-Host "  Guardrail may have allowed general health info" -ForegroundColor Yellow
     }
 }
 catch {
@@ -160,21 +160,21 @@ catch {
 
 Write-Host ""
 Write-Host "  WHERE TO SEE GUARDRAIL DECISIONS:" -ForegroundColor Magenta
-Write-Host "  Option A — S3 Model Invocation Logs:" -ForegroundColor Gray
+Write-Host "  Option A - S3 Model Invocation Logs:" -ForegroundColor Gray
 Write-Host "    Bucket: llm-router-opa-dev-model-invocation-logs" -ForegroundColor DarkGray
 Write-Host "    Contains: full prompts, responses, guardrail filter results with confidence scores" -ForegroundColor DarkGray
-Write-Host "  Option B — CloudWatch:" -ForegroundColor Gray
+Write-Host "  Option B - CloudWatch:" -ForegroundColor Gray
 Write-Host "    Log group: /aws/bedrock/model-invocation-logs" -ForegroundColor DarkGray
 Write-Host "    Filter: 'GUARDRAIL_INTERVENED' or 'guardrailAction'" -ForegroundColor DarkGray
-Write-Host "  Option C — Console:" -ForegroundColor Gray
-Write-Host "    Bedrock > Guardrails > llm-router-safety > View metrics" -ForegroundColor DarkGray
+Write-Host "  Option C - Console:" -ForegroundColor Gray
+Write-Host '    Bedrock -> Guardrails -> llm-router-safety -> View metrics' -ForegroundColor DarkGray
 Write-Host ""
 
 # =============================================================================
 Write-Host "--- 5. DATA CLASSIFICATION: PII Detection ---" -ForegroundColor Yellow
 Write-Host ""
 Write-Host "  Sending a prompt containing PII (SSN, email)..."
-Write-Host "  (The data classifier Lambda scans before routing to external providers)"
+Write-Host "  The data classifier Lambda scans before routing to external providers"
 Write-Host ""
 # =============================================================================
 
@@ -186,7 +186,7 @@ $body = @{
 try {
     $r = Invoke-RestMethod -Uri "$ApiEndpoint/v1/chat/completions" -Method POST -Headers $Headers -Body $body
     Write-Host "  Model selected: $($r.routing.model_selected)" -ForegroundColor Green
-    Write-Host "  (Routed to internal Bedrock — data classifier would block external)" -ForegroundColor Green
+    Write-Host "  Routed to internal Bedrock - data classifier would block external" -ForegroundColor Green
 }
 catch {
     Write-Host "  Result: $($_.Exception.Message)" -ForegroundColor Yellow
@@ -228,7 +228,7 @@ Write-Host ""
 Write-Host "  Layer             | Where to Look" -ForegroundColor White
 Write-Host "  ------------------|--------------------------------------------------" -ForegroundColor White
 Write-Host "  OPA decisions     | CloudWatch: /llm-router/dev/agent" -ForegroundColor Gray
-Write-Host "  Cedar decisions   | Console: Bedrock > AgentCore > Gateway > Observability" -ForegroundColor Gray
+Write-Host '  Cedar decisions   | Console: Bedrock -> AgentCore -> Gateway -> Observability' -ForegroundColor Gray
 Write-Host "  Guardrail actions | S3: model-invocation-logs bucket" -ForegroundColor Gray
 Write-Host "  Data classifier   | DynamoDB: data-flow-log table" -ForegroundColor Gray
 Write-Host "  Full provenance   | DynamoDB: routing-audit-log table" -ForegroundColor Gray
