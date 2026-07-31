@@ -1,6 +1,6 @@
 # LLM Router — Dynamic Model Selection on AWS
 
-A production-grade LLM routing system built on **Amazon Bedrock AgentCore** that dynamically selects and switches between model providers based on task complexity, cost budgets, latency requirements, and quality thresholds. Designed with **ISO 42001** (AI Management Systems) compliance built in.
+A production-grade LLM routing system built on **Amazon Bedrock AgentCore** that dynamically selects and switches between model providers based on task complexity, cost budgets, latency requirements, and quality thresholds. Designed with **ISO 42001** (AI Management Systems) compliance built in and SOC2 governance added.
 
 ## Architecture Overview
 
@@ -58,6 +58,7 @@ The Router Agent container calls tools via the **AgentCore Gateway** using MCP p
 - **Auto Async Detection**: Complex requests automatically dispatch asynchronously (client polls for results)
 - **Hot-Swap via AppConfig**: Enable/disable models, adjust traffic splits, and activate kill switches without deployments
 - **ISO 42001 Compliance**: Content guardrails, PII protection, transparency APIs, human oversight, governance documentation
+- **SOC 2 Trust Services Coverage**: All 35 criteria addressed — encryption at rest, access controls, audit logging, data classification, change management, availability controls, concern reporting with SLA tracking
 - **Data Provenance & Lineage**: Full audit trail per request (who, what, why, how, where, model provenance)
 - **Adaptive Feedback Loop**: Model weights adjust based on observed latency, quality, and error rates via Kinesis pipeline
 - **Circuit Breaker**: Automatic failover when a model/provider degrades
